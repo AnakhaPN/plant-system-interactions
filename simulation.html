@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Simulation with Animated Stomata and Labels</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #000;
+            margin-top: 20px;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        .slider {
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Plant Growth Simulation with Animated Stomata and Labels</h1>
+    <p>Adjust sunlight, water concentration, stomata opening, and CO2 to see how they affect the plant's growth!</p>
+
+    <!-- Sliders to control sunlight, water concentration, stomata, and CO2 -->
+    <div class="controls">
+        <label for="sunlight">Sunlight (0-100):</label>
+        <input type="range" id="sunlight" class="slider" min="0" max="100" value="50"><br>
+
+        <label for="water">Water Concentration (0-100):</label>
+        <input type="range" id="water" class="slider" min="0" max="100" value="50"><br>
+
+        <label for="stomata">Stomata Opening (0-100):</label>
+        <input type="range" id="stomata" class="slider" min="0" max="100" value="50"><br>
+
+        <label for="co2">CO2 Concentration (0-100):</label>
+        <input type="range" id="co2" class="slider" min="0" max="100" value="50"><br>
+    </div>
+
+    <!-- Canvas for simulation -->
+    <canvas id="plantCanvas" width="600" height="500"></canvas>
+
+    <script>
+        const canvas = document.getElementById('plantCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const sunlightSlider = document.getElementById('sunlight');
+        const waterSlider = document.getElementById('water');
+        const stomataSlider = document.getElementById('stomata');
+        const co2Slider = document.getElementById('co2');
+
+        let sunlight = sunlightSlider.value;
+        let water = waterSlider.value;
+        let stomata = stomataSlider.value;
+        let co2 = co2Slider.value;
+
+        let stomataRadius = stomata / 100 * 10; // Initial stomata size
+        let stomataDirection = 1; // 1 for expanding, -1 for contracting
+        let stomataStep = 0.1; // Step size for stomata size change
+
+        let leafSize = 0;
+        let waterHeight = 0;
+        let stemHeight = 100;
+        let nutrients = 0; // Represents the nutrient accumulation in the plant
+        let nutrientFactor = 0.5; // How much nutrients affect growth
+
+        // Update simulation values based on slider input
+        sunlightSlider.addEventListener('input', () => {
+            sunlight = sunlightSlider.value;
+            drawPlant();
+        });
+        waterSlider.addEventListener('input', () => {
+            water = waterSlider.value;
+            drawPlant();
+        });
+        stomataSlider.addEventListener('input', () => {
+            stomata = stomataSlider.value;
+            stomataRadius = stomata / 100 * 10; // Update stomata radius with slider value
+            drawPlant();
+        });
+        co2Slider.addEventListener('input', () => {
+            co2 = co2Slider.value;
+            drawPlant();
+        });
+
+        // Function to calculate nutrient accumulation based on the environment
+        function updateNutrients() {
+            // Nutrients depend on sunlight, water, stomata, and CO2
+            nutrients = ((sunlight / 100) + (water / 100) + (stomata / 100) + (co2 / 100)) * nutrientFactor;
+            nutrients = Math.min(nutrients, 1); // Nutrients are capped at 1 (100%)
+        }
+
+        // Function to simulate plant growth
+        function updatePlantGrowth() {
+            // Growth is based on nutrients, which depend on sunlight, water, stomata, and CO2
+            updateNutrients();
+
+            // Stem and leaf growth based on nutrient accumulation and sunlight
+            stemHeight = 100 + (water / 100) * 50 + (sunlight / 100) * 50 + (nutrients * 50);
+            leafSize = Math.min(50, (sunlight / 100) * 50 + (nutrients * 25)); // Leaves grow with nutrients
+
+            // Maximum growth caps for leaves and stem
+            stemHeight = Math.min(stemHeight, 300); // Cap stem height at 300px
+            leafSize = Math.min(leafSize, 50); // Cap leaf size at 50px
+        }
+
+        // Draw the plant simulation with animations and growth
+        function drawPlant() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw plant pot
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(250, 400, 100, 50);
+
+            // Update plant growth based on nutrient accumulation
+            updatePlantGrowth();
+
+            // Draw plant stem (animates based on water, sunlight, and nutrient growth)
+            ctx.fillStyle = '#006400';
+            ctx.fillRect(290, 200, 20, stemHeight);
+
+            // Animate leaf size based on sunlight and nutrients
+            ctx.beginPath();
+            ctx.moveTo(290, 200);
+            ctx.lineTo(230, 150 - leafSize);
+            ctx.lineTo(350, 150 - leafSize);
+            ctx.closePath();
+            ctx.fillStyle = 'green';
+            ctx.fill();
+
+            // Animate stomata opening/closing based on stomata slider
+            let stomataRadiusCurrent = stomataRadius; // Initial radius set by slider
+            stomataRadiusCurrent += stomataDirection * stomataStep;
+            if (stomataRadiusCurrent >= (stomata / 100) * 10 || stomataRadiusCurrent <= 0) {
+                stomataDirection *= -1; // Reverse direction when max or min size is reached
+            }
+
+            // Draw the stomata
+            ctx.beginPath();
+            ctx.arc(230, 150 - leafSize, stomataRadiusCurrent, 0, Math.PI * 2);
+            ctx.arc(350, 150 - leafSize, stomataRadiusCurrent, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+
+            // Animate water in the roots (water concentration)
+            waterHeight = (water / 100) * 100;
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(290, 400 - waterHeight, 20, waterHeight);
+
+            // Add labels for plant regions
+            ctx.fillStyle = 'black';
+            ctx.font = '16px Arial';
+            ctx.fillText("Root System", 260, 420); // Label for root system
+            ctx.fillText("Stem", 315, 250); // Label for stem
+            ctx.fillText("Leaves", 200, 150 - leafSize); // Label for leaves
+            ctx.fillText("Stomata", 340, 150 - leafSize); // Label for stomata
+
+            // Display dynamic information
+            ctx.fillText(`Sunlight: ${sunlight}%`, 20, 30);
+            ctx.fillText(`Water: ${water}%`, 20, 60);
+            ctx.fillText(`Stomata: ${stomata}%`, 20, 90);
+            ctx.fillText(`CO2: ${co2}%`, 20, 120);
+
+            // Photosynthesis Simulation Effect with CO2, Sunlight, and Water
+            let photosynthesis = (sunlight / 100) * (water / 100) * (stomata / 100) * (co2 / 100);
+            ctx.fillText(`Photosynthesis Efficiency: ${(photosynthesis * 100).toFixed(2)}%`, 20, 150);
+
+            // Nutrient efficiency and its effect on plant growth
+            ctx.fillText(`Nutrient Efficiency: ${(nutrients * 100).toFixed(2)}%`, 20, 180);
+        }
+
+        // Initial draw
+        drawPlant();
+
+        // Optional: Animation loop to simulate plant responses over time
+        function animate() {
+            requestAnimationFrame(animate);
+            drawPlant();
+        }
+
+        animate(); // Start animation loop
+    </script>
+</body>
+</html>
